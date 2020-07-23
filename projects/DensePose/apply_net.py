@@ -86,10 +86,26 @@ class InferenceAction(Action):
             return
         context = cls.create_context(args)
         for file_name in file_list:
-            img = read_image(file_name, format="BGR")  # predictor expects BGR image.
-            with torch.no_grad():
-                outputs = predictor(img)["instances"]
-                cls.execute_on_outputs(context, {"file_name": file_name, "image": img}, outputs)
+            logger.info("File List: " + file_name)
+
+            if(file_name[-4:] == ".mp4"): # if input is a mp4 video, use OpenCV to loop through each frame
+                cap = cv2.VideoCapture(file_name)
+                i = 0
+                while(cap.isOpened()):
+                    ret,frame = cap.read()
+                    if ret == False:
+                        break
+                    img = frame
+                    i+=1
+                    with torch.no_grad():
+                        outputs = predictor(img)["instances"]
+                        cls.execute_on_outputs(context, {"file_name": file_name, "image": img}, outputs)
+            else:
+                img = read_image(file_name, format="BGR")  # predictor expects BGR image.
+                with torch.no_grad():
+                    outputs = predictor(img)["instances"]
+                    cls.execute_on_outputs(context, {"file_name": file_name, "image": img}, outputs)
+                
         cls.postexecute(context)
 
     @classmethod
